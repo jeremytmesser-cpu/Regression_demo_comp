@@ -1,0 +1,117 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Explain the Model: linear regression, random forest, gradient boosting</title>
+  <meta name="description" content="Three interactive explainers: how a linear regression, a random forest and gradient boosting turn a person's data into a prediction.">
+  <style>
+    :root {
+      --bg: #ffffff; --fg: #1d1d1f; --muted: #5f5f66; --line: #d9d9de; --accent: #2f6fde;
+      --up: #c2410c; --down: #1d6fb8; --card: #f6f6f8; --good: #15803d; --warn: #b45309; --obs: #7c3aed;
+      --soft: #e7e7ec;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #151517; --fg: #ececef; --muted: #a8a8b0; --line: #3a3a41; --accent: #7aa7ff;
+        --up: #fb923c; --down: #60a5fa; --card: #1f1f23; --good: #4ade80; --warn: #fbbf24; --obs: #c4b5fd;
+        --soft: #2c2c33;
+      }
+    }
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--bg); color: var(--fg); font: 16px/1.55 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    header, main, footer { max-width: 980px; margin: 0 auto; padding: 12px 16px; }
+    h1 { font-size: 1.5rem; margin: 8px 0 4px; }
+    h2 { font-size: 1.35rem; margin: 6px 0 8px; }
+    h3 { font-size: 1.1rem; margin: 22px 0 6px; }
+    p { margin: 8px 0; }
+    nav { display: flex; flex-wrap: wrap; gap: 8px; margin: 8px 0; }
+    nav a { padding: 6px 12px; border: 1px solid var(--line); border-radius: 999px; color: var(--accent); text-decoration: none; background: var(--card); }
+    nav a.active { background: var(--accent); color: #fff; border-color: var(--accent); font-weight: 600; }
+    @media (prefers-color-scheme: dark) { nav a.active { color: #101014; } }
+    nav a small { opacity: .8; font-weight: 400; }
+    .controls { display: flex; flex-wrap: wrap; gap: 12px 20px; margin: 10px 0; align-items: end; }
+    .controls label { display: flex; flex-direction: column; font-size: 13px; color: var(--muted); gap: 2px; }
+    select, input[type=number], button { font: inherit; padding: 5px 8px; background: var(--card); color: var(--fg); border: 1px solid var(--line); border-radius: 6px; }
+    button { cursor: pointer; }
+    button:hover { border-color: var(--accent); }
+    button.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+    @media (prefers-color-scheme: dark) { button.on { color: #101014; } }
+    input[type=range] { width: 100%; accent-color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 12px 16px; margin: 12px 0; }
+    .goal { border-left: 4px solid var(--accent); }
+    .recipe { font-size: 1.05rem; }
+    .recipe code, .eq { font-family: ui-monospace, Menlo, Consolas, monospace; background: var(--soft); padding: 1px 6px; border-radius: 4px; }
+    .data-line { color: var(--muted); font-size: 14px; }
+    table { border-collapse: collapse; width: 100%; margin: 10px 0; font-size: 15px; }
+    td, th { border-bottom: 1px solid var(--line); padding: 5px 8px; text-align: left; vertical-align: top; }
+    th { font-weight: 600; color: var(--muted); font-size: 13px; }
+    td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+    tr.dim td { color: var(--muted); opacity: .55; }
+    tr.sel td { background: var(--soft); }
+    tr.total td, tr.total th { border-top: 2px solid var(--fg); font-weight: 700; color: var(--fg); font-size: 15px; }
+    .up { color: var(--up); } .down { color: var(--down); }
+    .note { color: var(--muted); font-size: 14px; }
+    .big { font-size: 1.25rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+    @media (max-width: 760px) { .row { grid-template-columns: 1fr; } }
+    .inputs { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px 16px; }
+    .inputs label { display: flex; flex-direction: column; font-size: 14px; gap: 2px; }
+    .inputs output { font-weight: 600; font-variant-numeric: tabular-nums; }
+    svg { width: 100%; height: auto; display: block; }
+    svg text { fill: var(--fg); font-size: 12px; font-family: inherit; }
+    svg .m { fill: var(--muted); }
+    svg .axis { stroke: var(--line); stroke-width: 1; }
+    svg .grid { stroke: var(--soft); stroke-width: 1; }
+    .legend { display: flex; flex-wrap: wrap; gap: 4px 16px; font-size: 13px; color: var(--muted); margin: 2px 0 6px; }
+    .sw { display: inline-block; width: 12px; height: 12px; border-radius: 3px; vertical-align: -1px; margin-right: 4px; }
+    .slider-row { display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; margin: 8px 0; }
+    .slider-row .lab { font-weight: 600; }
+    .slider-row .val { min-width: 4ch; text-align: right; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .callout { border-left: 4px solid var(--warn); background: var(--card); padding: 8px 14px; border-radius: 0 8px 8px 0; margin: 10px 0; }
+    .callout.good { border-left-color: var(--good); }
+    .callout.key { border-left-color: var(--accent); }
+    .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 12px; background: var(--soft); color: var(--muted); }
+    .pill.flag { background: var(--warn); color: #fff; }
+    details { margin: 8px 0; }
+    summary { cursor: pointer; font-weight: 600; }
+    .trees { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 10px; }
+    .tree { background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; font-size: 14px; }
+    .tree ol { margin: 4px 0; padding-left: 20px; }
+    .tree li { margin: 1px 0; }
+    .yes { color: var(--good); font-weight: 600; } .no { color: var(--warn); font-weight: 600; }
+    .leaf { margin-top: 4px; font-weight: 700; }
+    footer { color: var(--muted); font-size: 13px; border-top: 1px solid var(--line); margin-top: 24px; }
+    .btns { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin: 6px 0; }
+    .sr { position: absolute; left: -9999px; }
+    @media (max-width: 760px) {
+      table { display: block; overflow-x: auto; max-width: 100%; }
+      .controls label, .controls select { max-width: 100%; }
+      select { max-width: 100%; }
+      .trees { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Explain the Model</h1>
+    <p class="note" style="margin:0">Three ways to turn one person's health data into a number, each explained step by step: a line, a forest of trees, and a model that fixes its own mistakes.</p>
+    <nav aria-label="Sections">
+      <a href="#linear">1. Push &amp; Pull <small>(linear regression)</small></a>
+      <a href="#forest">2. Wisdom of the Forest <small>(random forest)</small></a>
+      <a href="#boosting">3. One Correction at a Time <small>(gradient boosting)</small></a>
+    </nav>
+    <div class="controls">
+      <label>Dataset (what is being predicted)
+        <select id="dataset"></select></label>
+      <label>Example person (a real survey participant)
+        <select id="person"></select></label>
+    </div>
+    <div id="dataline" class="data-line"></div>
+  </header>
+  <main id="section" aria-live="polite"></main>
+  <footer id="footer"></footer>
+  <script type="module" src="app.js"></script>
+</body>
+</html>
